@@ -285,7 +285,7 @@ async def update_powdered_leaves_weight(powdered_leaves_ID: int, weight_update: 
 
 
 # Create a new shipment, takes in harbor ID as parameter
-@app.post("/create_harbor_checkpoint", response_model=HarborCheckpoint, status_code=status.HTTP_201_CREATED)
+@app.post("/create_harbor_checkpoint", response_model=HarborCheckpointCreate, status_code=status.HTTP_201_CREATED)
 async def create_harbor_checkpoint(checkpoint_data: HarborCheckpointCreate):
     cursor = connect.cursor(dictionary=True)
     # Default values: transport_status set to 1, other optional fields are set to NULL if not provided

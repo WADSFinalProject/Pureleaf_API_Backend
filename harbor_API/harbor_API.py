@@ -231,3 +231,52 @@ def get_shipments_with_status_3():
         cursor.close()
         conn.close()
 
+# Update Shipment Information
+@app.put("/update_harbor_shipment/{checkpoint_ID}", response_model=HarborCheckpoint)
+def update_harbor_shipment(checkpoint_ID: int, update_data: HarborUpdateModel):
+    conn = get_new_connection()
+    if conn is None:
+        raise HTTPException(status_code=500, detail="Database connection failed")
+    cursor = conn.cursor(dictionary=True)
+    try:
+        # Building the dynamic SQL query based on provided fields
+        update_fields = []
+        values = []
+        
+        if update_data.harbor_batch_rescale is not None:
+            update_fields.append("harbor_batch_rescale = %s")
+            values.append(update_data.harbor_batch_rescale)
+        if update_data.arrival_date is not None:
+            update_fields.append("arrival_date = %s")
+            values.append(update_data.arrival_date)
+        if update_data.hg_user_ID is not None:
+            update_fields.append("hg_user_ID = %s")
+            values.append(update_data.hg_user_ID)
+
+        if not update_fields:
+            raise HTTPException(status_code=400, detail="No valid fields provided for update")
+
+        # Join the update fields with commas and format the SQL statement
+        sql_update = ", ".join(update_fields)
+        sql_query = f"UPDATE harbor_checkpoint SET {sql_update} WHERE checkpoint_ID = %s"
+        values.append(checkpoint_ID)
+        
+        cursor.execute(sql_query, tuple(values))
+        conn.commit()
+
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Shipment not found or no update needed")
+
+        # Fetch the updated record to return
+        cursor.execute("SELECT * FROM harbor_checkpoint WHERE checkpoint_ID = %s", (checkpoint_ID,))
+        updated_shipment = cursor.fetchone()
+        if not updated_shipment:
+            raise HTTPException(status_code=404, detail="Shipment not found after update")
+
+        return HarborCheckpoint(**updated_shipment)
+    except Error as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"Database update failed: {e}")
+    finally:
+        cursor.close()
+        conn.close()

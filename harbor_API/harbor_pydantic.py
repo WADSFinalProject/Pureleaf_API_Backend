@@ -54,14 +54,13 @@ class BatchInformation(BaseModel):
 
 class HarborCheckpoint(BaseModel):
     checkpoint_ID: int
-    harbor_batch_rescale: float
+    harbor_batch_rescale: Optional[float] = None
     sent_date: datetime
-    arrival_date: datetime
-    transport_status: int
+    arrival_date: Optional[datetime] = None
+    transport_status: Optional[int] = None
     batch_ID: int
-    hg_user_ID: int
+    hg_user_ID: Optional[int] = None
     harbor_ID: int
-    transport_status_description: str
 
 class HarborCheckpointInformation(BaseModel):
     checkpoint_ID: int
@@ -80,3 +79,7 @@ class HarborCheckpointInformation(BaseModel):
     powdered_leaves: Optional[PowderedLeaves]
     hg_user_ID: int
 
+class HarborUpdateModel(BaseModel):
+    harbor_batch_rescale: Optional[float] = None
+    arrival_date: Optional[datetime] = None
+    hg_user_ID: Optional[int] = None

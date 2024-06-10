@@ -142,63 +142,64 @@ async def get_batch_by_id(batch_id: int = Path(..., title="The ID of the batch t
     except Error as err:
         raise HTTPException(status_code=500, detail=str(err))
 
+# TODO: Needs to be adjusted to work with new status function.
 # Get batch information based on status
-@app.get("/batches/status/{status}", response_model=List[BatchInformation])
-async def get_batches_by_status(status: int):
-    if status not in [0, 1]:
-        raise HTTPException(status_code=400, detail="Invalid status. Status must be 0 or 1.")
+# @app.get("/batches/status/{status}", response_model=List[BatchInformation])
+# async def get_batches_by_status(status: int):
+#     if status not in [0, 1]:
+#         raise HTTPException(status_code=400, detail="Invalid status. Status must be 0 or 1.")
     
-    connection = get_new_connection()
-    if connection is None:
-        raise HTTPException(status_code=500, detail="Database connection failed")
+#     connection = get_new_connection()
+#     if connection is None:
+#         raise HTTPException(status_code=500, detail="Database connection failed")
         
-    try:
-        cursor = connection.cursor(dictionary=True)
-        query = """
-        SELECT bi.*, dl.*, wl.*, pl.*
-        FROM batch_information bi
-        LEFT JOIN dry_leaves dl ON bi.dry_leaves_ID = dl.dry_leaves_ID
-        LEFT JOIN wet_leaves wl ON bi.wet_leaves_ID = wl.wet_leaves_ID
-        LEFT JOIN powdered_leaves pl ON bi.powdered_leaves_ID = pl.powdered_leaves_ID
-        WHERE bi.status = %s;
-        """
-        cursor.execute(query, (status,))
-        result = cursor.fetchall()
-        cursor.close()
-        connection.close()
+#     try:
+#         cursor = connection.cursor(dictionary=True)
+#         query = """
+#         SELECT bi.*, dl.*, wl.*, pl.*
+#         FROM batch_information bi
+#         LEFT JOIN dry_leaves dl ON bi.dry_leaves_ID = dl.dry_leaves_ID
+#         LEFT JOIN wet_leaves wl ON bi.wet_leaves_ID = wl.wet_leaves_ID
+#         LEFT JOIN powdered_leaves pl ON bi.powdered_leaves_ID = pl.powdered_leaves_ID
+#         WHERE bi.status = %s;
+#         """
+#         cursor.execute(query, (status,))
+#         result = cursor.fetchall()
+#         cursor.close()
+#         connection.close()
         
-        formatted_result = []
-        for row in result:
-            formatted_row = {
-                "batch_ID": row["batch_ID"],
-                "batch_date": row["batch_date"],
-                "dry_leaves_ID": row.get("dry_leaves_ID"),
-                "wet_leaves_ID": row.get("wet_leaves_ID"),
-                "powdered_leaves_ID": row.get("powdered_leaves_ID"),
-                "status": row["status"],
-                "dry_leaves": {
-                    "dry_leaves_ID": row.get("dry_leaves_ID"),
-                    "dry_weight": row.get("dry_weight"),
-                    "dry_date": row.get("dry_date"),
-                    "dry_image": row.get("dry_image")
-                } if row.get("dry_leaves_ID") else None,
-                "wet_leaves": {
-                    "wet_leaves_ID": row.get("wet_leaves_ID"),
-                    "wet_weight": row.get("wet_weight"),
-                    "wet_date": row.get("wet_date"),
-                    "wet_image": row.get("wet_image")
-                } if row.get("wet_leaves_ID") else None,
-                "powdered_leaves": {
-                    "powdered_leaves_ID": row.get("powdered_leaves_ID"),
-                    "powdered_weight": row.get("powdered_weight"),
-                    "powdered_date": row.get("powdered_date"),
-                    "powdered_image": row.get("powdered_image")
-                } if row.get("powdered_leaves_ID") else None
-            }
-            formatted_result.append(formatted_row)
-        return formatted_result
-    except Error as err:
-        raise HTTPException(status_code=500, detail=str(err))
+#         formatted_result = []
+#         for row in result:
+#             formatted_row = {
+#                 "batch_ID": row["batch_ID"],
+#                 "batch_date": row["batch_date"],
+#                 "dry_leaves_ID": row.get("dry_leaves_ID"),
+#                 "wet_leaves_ID": row.get("wet_leaves_ID"),
+#                 "powdered_leaves_ID": row.get("powdered_leaves_ID"),
+#                 "status": row["status"],
+#                 "dry_leaves": {
+#                     "dry_leaves_ID": row.get("dry_leaves_ID"),
+#                     "dry_weight": row.get("dry_weight"),
+#                     "dry_date": row.get("dry_date"),
+#                     "dry_image": row.get("dry_image")
+#                 } if row.get("dry_leaves_ID") else None,
+#                 "wet_leaves": {
+#                     "wet_leaves_ID": row.get("wet_leaves_ID"),
+#                     "wet_weight": row.get("wet_weight"),
+#                     "wet_date": row.get("wet_date"),
+#                     "wet_image": row.get("wet_image")
+#                 } if row.get("wet_leaves_ID") else None,
+#                 "powdered_leaves": {
+#                     "powdered_leaves_ID": row.get("powdered_leaves_ID"),
+#                     "powdered_weight": row.get("powdered_weight"),
+#                     "powdered_date": row.get("powdered_date"),
+#                     "powdered_image": row.get("powdered_image")
+#                 } if row.get("powdered_leaves_ID") else None
+#             }
+#             formatted_result.append(formatted_row)
+#         return formatted_result
+#     except Error as err:
+#         raise HTTPException(status_code=500, detail=str(err))
 
 # TODO: This piece seems redundant for Admin, since Admin is only for viewing data
 # Update order as finished
@@ -219,7 +220,6 @@ async def get_batches_by_status(status: int):
 #         print("Error occurred:", err)
 #         return JSONResponse(content={"message": "Failed to update batch status"}, status_code=500)
     
-# TODO: Why won't it show user_ID? The syntax worked in MySQL
 # Get all shipment information with harbor guard user IDs
 @app.get("/shipments/", response_model=List[HarborCheckpoint])
 def get_all_shipments():
