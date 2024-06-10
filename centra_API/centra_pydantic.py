@@ -63,7 +63,6 @@ class HarborCheckpoint(BaseModel):
     harbor_ID: int
     user_ID: Optional[str]
 
-
 class HarborCheckpointInformation(BaseModel):
     checkpoint_ID: int
     harbour_batch_rescale: float
@@ -75,3 +74,26 @@ class HarborCheckpointInformation(BaseModel):
     wet_leaves_ID: Optional[int]
     powdered_leaves_ID: Optional[int]
     hg_user_ID: int
+
+class OrderStatusUpdate(BaseModel):
+    status: int
+
+class WetLeavesWeightUpdate(BaseModel):
+    wet_weight: float
+
+class DryLeavesWeightUpdate(BaseModel):
+    dry_weight: float
+
+class PowderedLeavesWeightUpdate(BaseModel):
+    powdered_weight: float
+
+
+class HarborCheckpointCreate(BaseModel):
+    sent_date: datetime
+    batch_ID: int
+    harbor_ID: int
+    transport_status: Optional[int] = None
+    harbor_batch_rescale: Optional[float] = None
+    arrival_date: Optional[datetime] = None
+    hg_user_ID: Optional[int] = None
+
