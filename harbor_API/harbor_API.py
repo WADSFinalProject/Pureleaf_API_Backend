@@ -185,21 +185,25 @@ def update_shipment_status(harbor_id: int, shipment_id: int, status: int):
         cursor.close()
 
 # Latest shipment
-@app.get("/shipments/latest", response_model=HarborCheckpoint)
-def get_latest_shipment():
+@app.get("/shipments/{harbor_ID}/latest", response_model=HarborCheckpoint)
+def get_latest_shipment(harbor_ID: int):
     conn = get_new_connection()
     if conn is None:
         raise HTTPException(status_code=500, detail="Database connection failed")
     cursor = conn.cursor(dictionary=True)
     try:
-        cursor.execute("SELECT hc.*, bs.status_description AS transport_status_description" 
-                       " FROM harbor_checkpoint hc JOIN batch_status bs ON hc.transport_status = bs.status_ID ORDER BY hc.sent_date DESC LIMIT 1;")
+        cursor.execute("""
+            SELECT hc.*, bs.status_description AS transport_status_description
+            FROM harbor_checkpoint hc
+            JOIN batch_status bs ON hc.transport_status = bs.status_ID
+            WHERE hc.harbor_ID = %s
+            ORDER BY hc.sent_date DESC LIMIT 1
+        """, (harbor_ID,))
         result = cursor.fetchone()
         if not result:
-            raise HTTPException(status_code=404, detail="No shipments found")
+            raise HTTPException(status_code=404, detail="No shipments found for this harbor")
         return HarborCheckpoint(**result)
     except Error as e:
-        print(f"Database error: {e}")
         raise HTTPException(status_code=500, detail=f"Database query failed: {e}")
     finally:
         cursor.close()
@@ -207,33 +211,33 @@ def get_latest_shipment():
 
 
 # Finished shipments
-@app.get("/shipments/finished", response_model=List[HarborCheckpoint])
-def get_shipments_with_status_3():
+@app.get("/shipments/{harbor_ID}/finished", response_model=List[HarborCheckpoint])
+def get_shipments_with_status_3(harbor_ID: int):
     conn = get_new_connection()
     if conn is None:
         raise HTTPException(status_code=500, detail="Database connection failed")
     cursor = conn.cursor(dictionary=True)
     try:
-        cursor.execute(
-            "SELECT hc.*, bs.status_description AS transport_status_description "
-            "FROM harbor_checkpoint hc "
-            "JOIN batch_status bs ON hc.transport_status = bs.status_ID "
-            "WHERE hc.transport_status = 3"
-        )
+        cursor.execute("""
+            SELECT hc.*, bs.status_description AS transport_status_description
+            FROM harbor_checkpoint hc
+            JOIN batch_status bs ON hc.transport_status = bs.status_ID
+            WHERE hc.transport_status = 3 AND hc.harbor_ID = %s
+        """, (harbor_ID,))
         result = cursor.fetchall()
         if not result:
-            raise HTTPException(status_code=404, detail="No shipments found with transport status 3")
+            raise HTTPException(status_code=404, detail="No finished shipments found for this harbor")
         return [HarborCheckpoint(**row) for row in result]
     except Error as e:
-        print(f"Database error: {e}")
         raise HTTPException(status_code=500, detail=f"Database query failed: {e}")
     finally:
         cursor.close()
         conn.close()
 
+
 # Update Shipment Information
-@app.put("/update_harbor_shipment/{checkpoint_ID}", response_model=HarborCheckpoint)
-def update_harbor_shipment(checkpoint_ID: int, update_data: HarborUpdateModel):
+@app.put("/update_harbor_shipment/{harbor_ID}/{checkpoint_ID}", response_model=HarborCheckpoint)
+def update_harbor_shipment(harbor_ID: int, checkpoint_ID: int, update_data: HarborUpdateModel):
     conn = get_new_connection()
     if conn is None:
         raise HTTPException(status_code=500, detail="Database connection failed")
@@ -258,20 +262,21 @@ def update_harbor_shipment(checkpoint_ID: int, update_data: HarborUpdateModel):
 
         # Join the update fields with commas and format the SQL statement
         sql_update = ", ".join(update_fields)
-        sql_query = f"UPDATE harbor_checkpoint SET {sql_update} WHERE checkpoint_ID = %s"
+        sql_query = f"UPDATE harbor_checkpoint SET {sql_update} WHERE checkpoint_ID = %s AND harbor_ID = %s"
         values.append(checkpoint_ID)
+        values.append(harbor_ID)  # Add harbor_ID to the SQL parameters
         
         cursor.execute(sql_query, tuple(values))
         conn.commit()
 
         if cursor.rowcount == 0:
-            raise HTTPException(status_code=404, detail="Shipment not found or no update needed")
+            raise HTTPException(status_code=404, detail="Shipment not found, no update needed, or it does not belong to this harbor")
 
         # Fetch the updated record to return
-        cursor.execute("SELECT * FROM harbor_checkpoint WHERE checkpoint_ID = %s", (checkpoint_ID,))
+        cursor.execute("SELECT * FROM harbor_checkpoint WHERE checkpoint_ID = %s AND harbor_ID = %s", (checkpoint_ID, harbor_ID))
         updated_shipment = cursor.fetchone()
         if not updated_shipment:
-            raise HTTPException(status_code=404, detail="Shipment not found after update")
+            raise HTTPException(status_code=404, detail="Shipment not found after update in this harbor")
 
         return HarborCheckpoint(**updated_shipment)
     except Error as e:
